@@ -5,7 +5,6 @@ import torch
 from src.datasets import BrainDataset
 from src.models.agsrnet.config import AGSRArgs
 from src.models.agsrnet.training import (
-    compute_metrics,
     predict_from_arrays,
     train_full_and_predict,
     _train_agsr_step,
@@ -14,6 +13,7 @@ from src.models.agsrnet.training import (
 )
 from src.models.agsrnet.model import Discriminator
 from src.utils.core_utils import get_device
+from src.utils.metrics import compute_metrics
 
 DEVICE, PIN_MEMORY = get_device()
 

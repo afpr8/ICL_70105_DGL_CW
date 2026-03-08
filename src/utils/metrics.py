@@ -11,9 +11,16 @@ from scipy.sparse.csgraph import shortest_path as sp_shortest_path
 from scipy.spatial.distance import jensenshannon
 from sklearn.metrics import mean_absolute_error
 import torch
+from torch.utils.data import DataLoader
 
 # Local imports
+from src.datasets import BrainDataset
 from src.matrix_vectorizer import MatrixVectorizer
+from src.utils.core_utils import get_device
+from src.utils.data_utils import prepare_tensors
+from src.utils.model_args import BaseModelArgs
+
+DEVICE, PIN_MEMORY = get_device()
 
 # Filter out the specific deprecation warnings from pyparsing
 #   This is because matplotlib is using a deprecated pyparsing feature, it is
@@ -339,3 +346,42 @@ def sparsify_adj(A: np.ndarray, threshold_pct: float = 80.0) -> np.ndarray:
     threshold = np.percentile(A[mask], threshold_pct)
 
     return np.where(A >= threshold, A, 0.0)
+
+
+def compute_metrics(
+        model: torch.nn.Module,
+        dataset: BrainDataset,
+        args: BaseModelArgs
+    ) -> dict[str, float]:
+    """
+    Compute evaluation metrics for a dataset using the generator model
+
+    Params:
+        model: Trained AGSRNet generator
+        dataset: BrainDataset containing LR-HR pairs
+        args: AGSRArgs with padding, lr_dim, hr_dim
+    Returns:
+        dict[str, float]: Computed metrics (e.g., MSE, PSNR) for the dataset
+    """
+    loader = DataLoader(
+        dataset,
+        batch_size=1,
+        shuffle=False,
+        pin_memory=PIN_MEMORY
+    )
+    model.eval()
+    mats_arr = []
+    with torch.no_grad():
+        for lr_np, hr_np in loader:
+            lr_t, padded_hr = prepare_tensors(
+                lr_np.squeeze(0).numpy(),
+                hr_np.squeeze(0).numpy(),
+                args
+            )
+            raw_output = model(lr_t)
+            preds = (
+                raw_output[0]
+                if isinstance(raw_output, (tuple, list)) else raw_output
+            )
+            mats_arr.append((preds.unsqueeze(0), padded_hr.unsqueeze(0)))
+    return get_metrics(mats_arr, final_metrics=False)

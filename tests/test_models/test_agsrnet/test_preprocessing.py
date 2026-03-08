@@ -3,12 +3,9 @@ import torch
 
 from src.datasets import BrainDataset
 from src.models.agsrnet.config import AGSRArgs
-from src.models.agsrnet.preprocessing import (
-    pad_HR_adj,
-    prepare_tensors,
-    prepare_agsr_inputs
-)
+from src.models.agsrnet.preprocessing import prepare_agsr_inputs
 from src.utils.core_utils import get_device
+from src.utils.data_utils import pad_HR_adj, prepare_tensors
 
 DEVICE, PIN_MEMORY = get_device()
 

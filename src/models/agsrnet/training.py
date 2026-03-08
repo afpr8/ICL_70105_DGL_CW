@@ -13,14 +13,12 @@ from src.models.agsrnet.model import (
     Discriminator,
     gaussian_noise_layer
 )
-from src.models.agsrnet.preprocessing import (
-    prepare_agsr_inputs,
-    prepare_tensors
-)
+from src.models.agsrnet.preprocessing import prepare_agsr_inputs
 from src.training.logging import log_metrics_fold
 from src.training.predict import predict
 from src.utils.core_utils import get_device
-from src.utils.metrics import get_metrics
+from src.utils.data_utils import prepare_tensors
+from src.utils.metrics import compute_metrics
 
 DEVICE, PIN_MEMORY = get_device()
 
@@ -150,8 +148,8 @@ def train_agsr(
 
         for lr_np, hr_np in train_loader:
             lr_t, padded_hr = prepare_tensors(
-                lr_np.squeeze(0).numpy(),
-                hr_np.squeeze(0).numpy(),
+                lr_np.squeeze(0).numpy(), # Assumes batch size of 1
+                hr_np.squeeze(0).numpy(), # Assumes batch size of 1
                 model_args
             )
 
@@ -230,41 +228,6 @@ def train_fold_agsr(
     val_preds = predict(model, val_dataset_prepared)
 
     return val_preds
-
-
-def compute_metrics(
-        model: torch.nn.Module,
-        dataset: BrainDataset,
-        args: AGSRArgs
-    ) -> dict[str, float]:
-    """
-    Compute evaluation metrics for a dataset using the generator model
-
-    Params:
-        model: Trained AGSRNet generator
-        dataset: BrainDataset containing LR-HR pairs
-        args: AGSRArgs with padding, lr_dim, hr_dim
-    Returns:
-        dict[str, float]: Computed metrics (e.g., MSE, PSNR) for the dataset
-    """
-    loader = DataLoader(
-        dataset,
-        batch_size=1,
-        shuffle=False,
-        pin_memory=PIN_MEMORY
-    )
-    model.eval()
-    mats_arr = []
-    with torch.no_grad():
-        for lr_np, hr_np in loader:
-            lr_t, padded_hr = prepare_tensors(
-                lr_np.squeeze(0).numpy(),
-                hr_np.squeeze(0).numpy(),
-                args
-            )
-            preds, _, _, _ = model(lr_t)
-            mats_arr.append((preds.unsqueeze(0), padded_hr.unsqueeze(0)))
-    return get_metrics(mats_arr, final_metrics=False)
 
 
 def predict_from_arrays(
