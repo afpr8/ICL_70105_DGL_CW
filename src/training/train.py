@@ -15,10 +15,16 @@ from tqdm import tqdm
 
 # Local imports
 from src.datasets import BrainDataset, load_checkpoint
+from src.models.agsrnet.preprocessing import prepare_agsr_inputs
 from src.training.logging import log_metrics_fold
 from src.training.predict import get_prediction, predict
 from src.utils.core_utils import get_device
-from src.utils.metrics import get_metrics, precompute_gt_centralities
+from src.utils.data_utils import prepare_tensors
+from src.utils.metrics import (
+    compute_metrics,
+    get_metrics,
+    precompute_gt_centralities
+)
 from src.utils.model_args import BaseModelArgs
 from src.utils.submission_utils import (
     generate_submission,
@@ -90,9 +96,7 @@ def run_3_fold_cross_validation(
         gtc_cache_path = Path("./checkpoint/all_gt_centralities.npy")
         if use_checkpoint and gtc_cache_path.exists():
             print(f"Loading precomputed GT centralities from {gtc_cache_path}")
-            all_gt_centralities = (
-                load_checkpoint(str(gtc_cache_path))
-            )
+            all_gt_centralities = load_checkpoint(str(gtc_cache_path)).tolist()
         else:
             print("Precomputing GT centralities for all HR samples...")
             all_gt_centralities = precompute_gt_centralities(hr_data)
@@ -130,8 +134,8 @@ def run_3_fold_cross_validation(
     metrics_cache_path = Path("./checkpoint/fold_metrics_list.npy")
     if use_checkpoint and metrics_cache_path.exists():
         # Use provided start_fold_idx value to truncate saved data
-        fold_metrics_list = load_checkpoint(str(metrics_cache_path))
-        fold_metrics_list = list(fold_metrics_list[:start_fold_idx])
+        fold_metrics_list = load_checkpoint(str(metrics_cache_path)).tolist()
+        fold_metrics_list = fold_metrics_list[:start_fold_idx]
     else:
         fold_metrics_list = []
         start_fold_idx = 0  # Make sure to start from the beginning
@@ -167,7 +171,7 @@ def run_3_fold_cross_validation(
             output_mats_arr = [
                 (
                     pred[:, padding:-padding, padding:-padding],
-                    gt[:, padding:-padding, padding:-padding],
+                    gt[:, padding:-padding, padding:-padding]
                 )
                 for pred, gt in output_mats_arr
             ]
@@ -249,7 +253,8 @@ def _train_step(
     loss = loss_fn(outputs, y)
     loss.backward()
     optimizer.step()
-    return outputs.detach(), loss.item()
+    return loss.item()
+
 
 # TODO: Consider implementing early stopping or scheduling using val_dataset
 
@@ -294,30 +299,31 @@ def train_model(
         # train
         model.train()
         train_loss_running = 0.0
-        train_mats_arr = []
 
         for x_train, y_train in tqdm(
             train_loader, desc=f"Train epoch {epoch + 1}"
         ):
-            batch_pred, batch_loss = _train_step(
+            lr_t, padded_hr = prepare_tensors(
+                x_train.squeeze(0).numpy(), # Assumes batch size of 1
+                y_train.squeeze(0).numpy(), # Assumes batch size of 1
+                model_args
+            )
+
+            batch_loss = _train_step(
                 model,
-                x_train,
-                y_train,
+                lr_t,
+                padded_hr,
                 optimizer,
                 loss_fn
             )
             train_loss_running += batch_loss
-            train_mats_arr.append(
-                (batch_pred, y_train.detach())
-            )
 
         avg_train = train_loss_running / len(train_loader)
 
-        train_metrics = get_metrics(train_mats_arr, final_metrics=False)
+        train_metrics = compute_metrics(model, train_dataset, model_args)
         val_metrics = {}
         if val_dataset is not None:
-            val_mats_arr = predict(model, val_dataset, batch_size=model_args.batch_size)
-            val_metrics = get_metrics(val_mats_arr, final_metrics=False)
+            val_metrics = compute_metrics(model, val_dataset, model_args)
 
         if log_to_mlflow:
             log_metrics_fold(
@@ -375,6 +381,7 @@ def train_fold(
         log_to_mlflow=log_to_mlflow,
         loss_fn=loss_fn
     )
-    val_preds = predict(model, val_dataset)
+    val_dataset_prepared = prepare_agsr_inputs(val_dataset, model_args)
+    val_preds = predict(model, val_dataset_prepared)
 
     return val_preds

@@ -32,6 +32,11 @@ class DummyModel(torch.nn.Module):
         Returns:
             output: Output tensor of shape (B, 268, 268)
         """
+        # If the input is 2D (H, W), add a batch dimension to make it (1, H, W)
+        is_2d = (x.dim() == 2)
+        if is_2d:
+            x = x.unsqueeze(0)
+
         if x.dim() != 3:
             raise ValueError("Input must have shape (B, H, W)")
 
@@ -45,4 +50,4 @@ class DummyModel(torch.nn.Module):
         x = self.alpha * x
         x = (x + x.transpose(1, 2)) / 2
 
-        return torch.relu(x)
+        return torch.relu(x).squeeze(0)

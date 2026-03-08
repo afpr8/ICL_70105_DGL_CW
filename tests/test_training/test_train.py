@@ -27,13 +27,20 @@ def make_dummy_data(n_samples=6, lr_dim=160, hr_dim=268):
     return lr, hr
 
 
-def make_dummy_model_args(lr=1e-3, batch_size=2, weight_decay=0, epochs=1):
+def make_dummy_model_args(
+    lr=1e-3,
+    batch_size=1,
+    weight_decay=0,
+    epochs=1,
+    padding=0
+):
     """Create a minimal BaseModelArgs for testing."""
     return BaseModelArgs(
         lr=lr,
         batch_size=batch_size,
         weight_decay=weight_decay,
-        epochs=epochs
+        epochs=epochs,
+        padding=padding
     )
 
 # ------------------------
@@ -163,10 +170,8 @@ def test_train_step_basic():
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     loss_fn = torch.nn.MSELoss()
 
-    pred, loss_val = _train_step(model, x, y, optimizer, loss_fn)
+    loss_val = _train_step(model, x, y, optimizer, loss_fn)
 
-    assert isinstance(pred, torch.Tensor)
-    assert pred.shape == y.shape
     assert isinstance(loss_val, float)
 
 
