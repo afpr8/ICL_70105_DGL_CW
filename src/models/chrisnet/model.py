@@ -172,8 +172,13 @@ def compute_topo_features(G: nx.Graph) -> tuple[float, float, float]:
     A = nx.to_numpy_array(G)
     N = len(A)
 
+    # Convert strengths to distances (1/weight) for weighted shortest paths.
+    # Zero-weight entries are left as 0 (treated as absent by scipy).
+    with np.errstate(divide='ignore', invalid='ignore'):
+        A_dist = np.where(A > 0, 1.0 / A, 0.0)
+
     # All-pairs shortest paths via scipy (faster than NetworkX)
-    dist = sp_shortest_path(A, directed=False, unweighted=True)
+    dist = sp_shortest_path(A_dist, directed=False, unweighted=False)
 
     # Global efficiency: mean of 1/d[i,j] for i≠j, treating inf as 0
     with np.errstate(divide='ignore'):
@@ -186,7 +191,9 @@ def compute_topo_features(G: nx.Graph) -> tuple[float, float, float]:
     finite = dist[np.isfinite(dist) & (dist > 0)]
     L = np.mean(finite) if len(finite) > 0 else 1.0
     C = nx.approximation.average_clustering(G, trials=500, seed=42)
-    k_avg = np.mean([d for _, d in G.degree()])
+    # Use binary degree (edge count) for the Erdős–Rényi random graph baselines,
+    # not weighted strength which would inflate k_avg and break C_rand / L_rand.
+    k_avg = np.mean([d for _, d in G.degree(weight=None)])
     if k_avg < 1:
         swi = 1.0
     else:
@@ -267,8 +274,15 @@ class TopologyAwareDiscriminator(torch.nn.Module):
 
         hr_dim = args.hr_dim
         self.threshold_pct: float = getattr(args, 'threshold_pct', 80.0)
+        self.topo_scale: float = getattr(args, 'topo_scale', 100.0)
 
         self.dense_1 = Dense(hr_dim * hr_dim + 3, hr_dim, args)
+        # Boost initial weights for the 3 topology input rows so those neurons
+        # start more sensitive to topology features than the default std_dense init
+        topo_init_scale: float = getattr(args, 'topo_init_scale', 10.0)
+        with torch.no_grad():
+            self.dense_1.weights[-3:].mul_(topo_init_scale)
+
         self.relu_1 = torch.nn.ReLU(inplace=False)
 
         self.dense_2 = Dense(hr_dim, hr_dim, args)
@@ -300,7 +314,7 @@ class TopologyAwareDiscriminator(torch.nn.Module):
                 topo = torch.tensor([swi, ge, q], dtype=torch.float32)
 
         x = torch.cat(
-            [inputs.flatten(), topo.to(inputs.device)]
+            [inputs.flatten(), topo.to(inputs.device) * self.topo_scale]
         ).unsqueeze(0)  # (1, hr_dim² + 3)
 
         dc_den1 = self.relu_1(self.dense_1(x))

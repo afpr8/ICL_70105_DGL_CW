@@ -31,3 +31,19 @@ class ChrisNetArgs(BaseModelArgs):
     K_communities: int = 7      # number of Louvain communities
     rank: int = 16              # low-rank correction dimension for CommunityAwareSRLayer
     threshold_pct: float = 80.0 # percentile threshold for Louvain input graph
+
+    # Topology discriminator weighting
+    # topo_scale: multiplicative factor applied to the 3 topology scalars before
+    #   concatenation, compensating for their dilution by the 320^2 matrix values
+    # topo_init_scale: multiplier on the default weight init (std_dense) for the
+    #   3 topology input rows of dense_1, so those neurons start more sensitive
+    topo_scale: float = 100.0
+    topo_init_scale: float = 10.0
+
+    # GAN stability controls
+    # gen_loss_weight: scales the adversarial gen_loss relative to mse_loss,
+    #   preventing the discriminator signal from overwhelming reconstruction
+    # grad_clip: max gradient norm for both generator and discriminator;
+    #   guards against sudden large updates causing mode collapse
+    gen_loss_weight: float = 0.1
+    grad_clip: float = 1.0

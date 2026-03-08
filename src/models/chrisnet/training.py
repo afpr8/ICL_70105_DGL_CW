@@ -124,11 +124,22 @@ def _train_chrisnet_step(
     noisy_hr = gaussian_noise_layer(padded_hr, args)
 
     if isinstance(netD, TopologyAwareDiscriminator):
-        # For the real sample (model output): compute topo fresh
-        d_real = netD(model_outputs.detach(), topo=None)
-        # For the fake sample (noisy GT): use pre-computed GT topo
+        # Compute pred_topo once and reuse in the generator update below
+        with torch.no_grad():
+            G_pred = to_networkx(
+                model_outputs,
+                threshold_pct=netD.threshold_pct
+            )
+            swi, ge, q = compute_topo_features(G_pred)
+            pred_topo = torch.tensor(
+                [swi, ge, q],
+                dtype=torch.float32,
+                device=DEVICE
+            )
+        d_real = netD(model_outputs.detach(), topo=pred_topo)
         d_fake = netD(noisy_hr, topo=gt_topo)
     else:
+        pred_topo = None
         d_real = netD(model_outputs.detach())
         d_fake = netD(noisy_hr)
 
@@ -137,19 +148,22 @@ def _train_chrisnet_step(
         + bce_loss_fn(d_fake, torch.zeros_like(d_fake))
     )
     dc_loss.backward()
+    torch.nn.utils.clip_grad_norm_(netD.parameters(), args.grad_clip)
     optimizerD.step()
 
-    # Generator update
+    # Generator update — pass model_outputs so gradients flow back to the
+    #   generator
+    # Reuse pred_topo computed above to avoid a second shortest-path computation
     optimizerG.zero_grad()
-    noisy_hr_gen = gaussian_noise_layer(padded_hr, args)
 
     if isinstance(netD, TopologyAwareDiscriminator):
-        d_fake_gen = netD(noisy_hr_gen, topo=gt_topo)
+        d_fake_gen = netD(model_outputs, topo=pred_topo)
     else:
-        d_fake_gen = netD(noisy_hr_gen)
+        d_fake_gen = netD(model_outputs)
 
     gen_loss = bce_loss_fn(d_fake_gen, torch.ones_like(d_fake_gen))
-    (gen_loss + mse_loss).backward()
+    (args.gen_loss_weight * gen_loss + mse_loss).backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
     optimizerG.step()
 
     return (gen_loss + mse_loss).item()
@@ -322,9 +336,14 @@ def train_fold_chrisnet(
             lr_np, hr_np = val_dataset[i]
             lr_arr = lr_np.numpy()
             lr_t, padded_hr = prepare_tensors(lr_arr, hr_np.numpy(), model_args)
-            masks = compute_community_masks(lr_arr, model_args) if use_community else None
+            masks = (
+                compute_community_masks(lr_arr, model_args)
+                if use_community else None
+            )
             pred, _, _, _ = model(lr_t, masks)
-            val_preds.append((pred.unsqueeze(0).detach(), padded_hr.unsqueeze(0).detach()))
+            val_preds.append(
+                (pred.unsqueeze(0).detach(), padded_hr.unsqueeze(0).detach())
+            )
 
     return val_preds
 
@@ -346,16 +365,27 @@ def compute_metrics(
     """
     use_community = args.variant in ('full', 'community_only')
 
-    loader = DataLoader(dataset, batch_size=1, shuffle=False, pin_memory=PIN_MEMORY)
+    loader = DataLoader(
+        dataset,
+        batch_size=1,
+        shuffle=False,
+        pin_memory=PIN_MEMORY
+    )
     model.eval()
     mats_arr = []
 
     with torch.no_grad():
         for lr_np, hr_np in loader:
             lr_arr = lr_np.squeeze(0).numpy()
-            lr_t, padded_hr = prepare_tensors(lr_arr, hr_np.squeeze(0).numpy(), args)
+            lr_t, padded_hr = prepare_tensors(
+                lr_arr,
+                hr_np.squeeze(0).numpy(),
+                args
+            )
 
-            masks = compute_community_masks(lr_arr, args) if use_community else None
+            masks = (
+                compute_community_masks(lr_arr, args) if use_community else None
+            )
             preds, _, _, _ = model(lr_t, masks)
             mats_arr.append((preds.unsqueeze(0), padded_hr.unsqueeze(0)))
 
@@ -373,7 +403,7 @@ def predict_from_arrays(
     Params:
         model: Trained ChrisNet generator
         lr_arrays: NumPy array of LR inputs, shape (N, lr_dim, lr_dim)
-        model_args: ChrisNetArgs containing hr_dim, padding, and community params
+        model_args: ChrisNetArgs with hr_dim, padding, and community params
     Returns:
         Predicted HR arrays of shape (N, center_dim, center_dim)
     """
@@ -392,7 +422,10 @@ def predict_from_arrays(
     with torch.no_grad():
         for i, lr_np in enumerate(lr_arrays):
             lr_t = torch.tensor(lr_np, dtype=torch.float32, device=DEVICE)
-            masks = compute_community_masks(lr_np, model_args) if use_community else None
+            masks = (
+                compute_community_masks(lr_np, model_args)
+                if use_community else None
+            )
             preds, _, _, _ = model(lr_t, masks)
             pred_np = preds.detach().cpu().numpy()
             hr_predictions[i] = pred_np[
@@ -413,8 +446,10 @@ def train_full_and_predict(
     Train ChrisNet on full training data, then predict HR for test LR arrays
 
     Params:
-        lr_train: NumPy array of LR training samples, shape (N_train, lr_dim, lr_dim)
-        hr_train: NumPy array of HR training samples, shape (N_train, center_dim, center_dim)
+        lr_train: NumPy array of LR training samples
+            shape (N_train, lr_dim, lr_dim)
+        hr_train: NumPy array of HR training samples
+            shape (N_train, center_dim, center_dim)
         lr_test: NumPy array of LR test samples, shape (N_test, lr_dim, lr_dim)
         model_args: ChrisNetArgs instance with training hyperparameters
     Returns:
