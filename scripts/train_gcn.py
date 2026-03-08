@@ -9,7 +9,11 @@ from src.datasets import load_data
 from src.models.naive_gcn.config import NaiveGCNArgs
 from src.models.naive_gcn.model import NaiveGCN
 from src.models.agsrnet.training import train_full_and_predict
-from src.training.train import run_3_fold_cross_validation, train_fold
+from src.training.train import (
+    run_3_fold_cross_validation,
+    train_fold,
+    train_model
+)
 from src.utils.core_utils import set_seed
 from src.utils.submission_utils import generate_submission
 
@@ -43,7 +47,9 @@ if __name__ == "__main__":
         lr_train,
         hr_train,
         lr_test,
-        model_args
+        NaiveGCN,
+        model_args,
+        train_model
     )
 
     generate_submission(hr_predictions, output_path="./results/submission.csv")

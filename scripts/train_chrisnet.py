@@ -7,7 +7,11 @@ os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 from src.datasets import load_data
 from src.models.chrisnet.config import ChrisNetArgs
 from src.models.chrisnet.model import ChrisNet
-from src.models.chrisnet.training import train_fold_chrisnet, train_full_and_predict
+from src.models.chrisnet.training import (
+    train_chrisnet,
+    train_fold_chrisnet,
+    train_full_and_predict
+)
 from src.training.train import run_3_fold_cross_validation
 from src.utils.core_utils import set_seed
 from src.utils.submission_utils import generate_submission
@@ -35,6 +39,13 @@ if __name__ == "__main__":
     print("\n===== Generating Test Submission =====")
     lr_test, _ = load_data(hr_path=None, lr_path="data/lr_test.csv")
 
-    hr_predictions = train_full_and_predict(lr_train, hr_train, lr_test, model_args)
+    hr_predictions = train_full_and_predict(
+        lr_train,
+        hr_train,
+        lr_test,
+        ChrisNet,
+        model_args,
+        train_chrisnet
+    )
 
     generate_submission(hr_predictions, output_path="./results/submission.csv")
