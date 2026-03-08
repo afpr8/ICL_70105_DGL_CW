@@ -11,7 +11,7 @@ from src.utils.model_args import BaseModelArgs
 @dataclass
 class ChrisNetArgs(BaseModelArgs):
     lr: float = 1e-4
-    epochs: int = 150
+    epochs: int = 200
     lmbda: float = 16  # self-reconstruction loss weight
     lr_dim: int = 160
     hr_dim: int = 320  # padded 268 + 26*2

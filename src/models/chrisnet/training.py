@@ -18,7 +18,6 @@ from src.models.chrisnet.model import (
 )
 from src.models.chrisnet.preprocessing import (
     compute_community_masks,
-    prepare_chrisnet_inputs,
     prepare_tensors,
 )
 from src.training.logging import log_metrics_fold
@@ -61,17 +60,17 @@ def _precompute_gt_topo(
 
 
 def _train_chrisnet_step(
-        model: ChrisNet,
-        netD: torch.nn.Module,
-        lr_t: torch.Tensor,
-        padded_hr: torch.Tensor,
-        masks: list[torch.Tensor] | None,
-        gt_topo: torch.Tensor | None,
-        optimizerG: torch.optim.Optimizer,
-        optimizerD: torch.optim.Optimizer,
-        args: ChrisNetArgs,
-        loss_fn: torch.nn.Module | None = None,
-    ) -> float:
+    model: ChrisNet,
+    netD: torch.nn.Module,
+    lr_t: torch.Tensor,
+    padded_hr: torch.Tensor,
+    masks: list[torch.Tensor] | None,
+    gt_topo: torch.Tensor | None,
+    optimizerG: torch.optim.Optimizer,
+    optimizerD: torch.optim.Optimizer,
+    args: ChrisNetArgs,
+    loss_fn: torch.nn.Module | None = None,
+) -> float:
     """
     Perform one training step for a single LR-HR sample, including
     generator and discriminator updates

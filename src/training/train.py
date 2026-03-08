@@ -208,7 +208,7 @@ def run_3_fold_cross_validation(
                 mlflow.log_metric(f"fold{fold_idx}_{metric_name}", value)
 
     plot_cv_metrics(
-        fold_metrics_list, extra_metrics=["mae_glob_eff", "mae_avg_clust"]
+        fold_metrics_list, extra_metrics=["mae_glob_eff", "mae_modularity"]
     )
 
     # Aggregate mean ± std metrics across folds

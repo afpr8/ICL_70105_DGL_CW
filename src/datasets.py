@@ -110,6 +110,7 @@ def _reconstruct_matrices(
 
     return matrices
 
+
 def load_checkpoint(input_path: str) -> Any:
     """
     Loads an object from a NumPy .npy file

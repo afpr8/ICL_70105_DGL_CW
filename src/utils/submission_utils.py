@@ -103,6 +103,7 @@ def plot_cv_metrics(fold_metrics_list, extra_metrics=None):
     plt.tight_layout()
     plt.savefig("results/cv_metrics_report.png")
 
+
 def save_checkpoint(data_to_save: Any, output_path: str) -> None:
     """
     Saves any object to disk using NumPy's binary format
