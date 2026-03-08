@@ -138,7 +138,7 @@ def run_3_fold_cross_validation(
         fold_metrics_list = fold_metrics_list[:start_fold_idx]
     else:
         fold_metrics_list = []
-        start_fold_idx = 0 # Make sure to start from the beginning
+        start_fold_idx = 0  # Make sure to start from the beginning
 
     for fold_idx in range(start_fold_idx, len(all_folds)):
         train_idx, val_idx = all_folds[fold_idx]
@@ -185,7 +185,7 @@ def run_3_fold_cross_validation(
         # Save fold predictions
         generate_submission(
             hr_predictions,
-            output_path=f"./results/predictions_fold_{fold_idx+1}.csv"
+            output_path=f"./results/predictions_fold_{fold_idx + 1}.csv"
         )
 
         if get_final_metrics:
@@ -257,6 +257,8 @@ def _train_step(
 
 
 # TODO: Consider implementing early stopping or scheduling using val_dataset
+
+
 def train_model(
     model: torch.nn.Module,
     train_dataset: BrainDataset,
@@ -316,7 +318,7 @@ def train_model(
             )
             train_loss_running += batch_loss
 
-        avg_train = train_loss_running / len(train_loader)        
+        avg_train = train_loss_running / len(train_loader)
 
         train_metrics = compute_metrics(model, train_dataset, model_args)
         val_metrics = {}
@@ -351,7 +353,7 @@ def train_fold(
     model_args: BaseModelArgs,
     val_dataset: BrainDataset,
     fold_id: int,
-    log_to_mlflow : bool = True,
+    log_to_mlflow: bool = True,
     loss_fn: torch.nn.Module | None = None
 ) -> list[tuple[torch.Tensor, torch.Tensor]]:
     """
