@@ -140,7 +140,7 @@ def test_train_fold_with_final_metrics_centralities():
             "ec": [0]*16,
             "pc": [0]*16,
             "glob_eff": 0,
-            "avg_clust": 0
+            "modularity": 0
         } for _ in range(len(hr))
     ]
 

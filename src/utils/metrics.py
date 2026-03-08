@@ -1,5 +1,8 @@
 # GNN evaluation metric functions
 
+# Standard library imports
+import warnings
+
 # Third party imports
 import networkx as nx
 import numpy as np
@@ -11,6 +14,12 @@ import torch
 
 # Local imports
 from src.matrix_vectorizer import MatrixVectorizer
+
+# Filter out the specific deprecation warnings from pyparsing
+#   This is because matplotlib is using a deprecated pyparsing feature, it is
+#   cluttering test results
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="pyparsing")
+warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 
 
 def get_metrics(
@@ -45,7 +54,7 @@ def get_metrics(
 
     # Initialize lists to store MAEs for each centrality measure
     centrality_errors = {
-        k: [] for k in ["bc", "ec", "pc", "glob_eff", "avg_clust"]
+        k: [] for k in ["bc", "ec", "pc", "glob_eff", "modularity"]
     }
 
     pred_vectors = []
@@ -122,7 +131,8 @@ def precompute_gt_centralities(
     print("Computing cache...")
     gt_cache = []
     for mat in hr_data:
-        g = nx.from_numpy_array(mat, edge_attr="weight")
+        mat_sparse = sparsify_adj(mat, threshold_pct=80.0)
+        g = nx.from_numpy_array(mat_sparse, edge_attr="weight")
         gt_cache.append({
             "bc": list(nx.betweenness_centrality(g, weight="weight").values()),
             "ec": list(nx.eigenvector_centrality(
@@ -131,7 +141,7 @@ def precompute_gt_centralities(
                 max_iter=1000
             ).values()),
             "pc": list(nx.pagerank(g, weight="weight").values()),
-            "glob_eff": nx.global_efficiency(g),
+            "glob_eff": compute_global_efficiency(g),
             "modularity": compute_modularity(g)
         })
     return gt_cache
@@ -178,7 +188,10 @@ def _compute_centrality_errors(
     Raises:
         ValueError: If `pred_mat` and `gt_mat` have mismatched shapes
     """
-    pred_graph = nx.from_numpy_array(pred_mat, edge_attr="weight")
+    pred_mat_sparse = sparsify_adj(pred_mat, threshold_pct=80.0)
+    gt_mat_sparse = sparsify_adj(gt_mat, threshold_pct=80.0)
+
+    pred_graph = nx.from_numpy_array(pred_mat_sparse, edge_attr="weight")
 
     pred_bc = list(
         nx.betweenness_centrality(pred_graph, weight="weight").values()
@@ -193,7 +206,7 @@ def _compute_centrality_errors(
     pred_pc = list(
         nx.pagerank(pred_graph, weight="weight").values()
     )
-    pred_glob_eff = nx.global_efficiency(pred_graph)
+    pred_glob_eff = compute_global_efficiency(pred_graph)
     pred_mod = compute_modularity(pred_graph)
 
     if gt_cent is not None:
@@ -203,7 +216,7 @@ def _compute_centrality_errors(
         gt_glob_eff = gt_cent["glob_eff"]
         gt_mod = gt_cent["modularity"]
     else:
-        gt_graph = nx.from_numpy_array(gt_mat, edge_attr="weight")
+        gt_graph = nx.from_numpy_array(gt_mat_sparse, edge_attr="weight")
         gt_bc = list(
             nx.betweenness_centrality(gt_graph, weight="weight").values()
         )
@@ -217,7 +230,7 @@ def _compute_centrality_errors(
         gt_pc = list(
             nx.pagerank(gt_graph, weight="weight").values()
         )
-        gt_glob_eff = nx.global_efficiency(gt_graph)
+        gt_glob_eff = compute_global_efficiency(gt_graph)
         gt_mod = compute_modularity(gt_graph)
 
     return (
@@ -277,12 +290,13 @@ def compute_modularity(g: nx.Graph | nx.DiGraph) -> float:
     g_simple.remove_edges_from(nx.selfloop_edges(g_simple))
     
     if g_simple.number_of_edges() == 0:
-        return 0.0
-    
-    # Use your chosen community detection algorithm
-    communities = nx.community.label_propagation_communities(g_simple)
+        q = 0.0
+    else:
+        # Use your chosen community detection algorithm
+        communities = nx.community.label_propagation_communities(g_simple)
+        q = nx.community.modularity(g_simple, communities)
 
-    return nx.community.modularity(g_simple, communities)
+    return q
 
 
 def compute_global_efficiency(mat: np.ndarray) -> float:
@@ -290,8 +304,19 @@ def compute_global_efficiency(mat: np.ndarray) -> float:
     Computes global efficiency using SciPy's optimized shortest path
     Assumes an unweighted graph structure for path calculation
     """
-    # Ensure it's a sparse-friendly format if your matrix is large
-    dist = sp_shortest_path(mat, directed=False, unweighted=True)
+    if isinstance(mat, (nx.Graph, nx.DiGraph)):
+        # If it's a graph, convert it to a numpy adjacency matrix
+        A = nx.to_numpy_array(mat)
+    else:
+        # If it's already a numpy array, use it directly
+        A = mat
+
+    # Match the colleague's inversion: 1.0/weight
+    with np.errstate(divide='ignore', invalid='ignore'):
+        dist_matrix = np.where(A > 0, 1.0 / A, 0.0)
+    
+    # Use unweighted=False because we are passing a distance matrix
+    dist = sp_shortest_path(dist_matrix, directed=False, unweighted=False)
     
     # Global efficiency calculation
     # 1.0 / distance, treating infinity (unreachable) as 0.0
@@ -300,5 +325,17 @@ def compute_global_efficiency(mat: np.ndarray) -> float:
     inv_dist[~np.isfinite(inv_dist)] = 0.0
     np.fill_diagonal(inv_dist, 0.0)
     
-    n = mat.shape[0]
+    n = A.shape[0]
+
     return inv_dist.sum() / (n * (n - 1))
+
+def sparsify_adj(A: np.ndarray, threshold_pct: float = 80.0) -> np.ndarray:
+    """
+    Matches the discriminator's internal sparsification
+    """
+    # Ensure it's square
+    assert A.shape[0] == A.shape[1]
+    mask = ~np.eye(A.shape[0], dtype=bool)
+    threshold = np.percentile(A[mask], threshold_pct)
+
+    return np.where(A >= threshold, A, 0.0)
