@@ -1,8 +1,0 @@
-CV mae: 0.15045 ± 0.00313
-CV pcc: 0.55784 ± 0.00793
-CV js_distance: 0.30538 ± 0.00366
-CV mae_bc: 0.00364 ± 0.00005
-CV mae_ec: 0.03301 ± 0.00098
-CV mae_pc: 0.00141 ± 0.00002
-CV mae_glob_eff: 0.07272 ± 0.00212
-CV mae_modularity: 0.03733 ± 0.00508
