@@ -41,7 +41,7 @@ def get_device(verbose: bool = True) -> torch.device:
     """
     if torch.cuda.is_available():
         device = torch.device("cuda")
-        pin_memory = True
+        pin_memory = False
         if verbose:
             print(f"Using CUDA device: {torch.cuda.get_device_name(0)}")
     elif torch.backends.mps.is_available():
