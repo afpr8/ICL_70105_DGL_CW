@@ -42,21 +42,14 @@ def predict(
             x = x.to(DEVICE)
             y = y.to(DEVICE)
 
-            try:
-                # Try normal batched inference
-                output = get_prediction(model(x))
-                preds.append((output.detach(), y.detach()))
+            batch_preds = []
+            for i in range(x.shape[0]):
+                xi = x[i]
+                out = get_prediction(model(xi))
+                batch_preds.append(out)
 
-            except RuntimeError:
-                # Fallback: process sample-by-sample
-                batch_preds = []
-                for i in range(x.shape[0]):
-                    xi = x[i]
-                    out = get_prediction(model(xi))
-                    batch_preds.append(out)
-
-                output = torch.stack(batch_preds)
-                preds.append((output.detach(), y.detach()))
+            output = torch.stack(batch_preds)
+            preds.append((output.detach(), y.detach()))
 
     return preds
 
