@@ -27,7 +27,7 @@ class ChrisNetArgs(BaseModelArgs):
     weight_decay: float = 0.0
 
     # ChrisNet-specific hyperparameters
-    variant: Literal['full', 'community_only', 'topology_only', 'baseline'] = 'full'
+    variant: Literal['full', 'community_only', 'topology_only', 'baseline'] = 'community_only'
     K_communities: int = 7      # number of Louvain communities
     rank: int = 16              # low-rank correction dimension for CommunityAwareSRLayer
     threshold_pct: float = 80.0 # percentile threshold for Louvain input graph
