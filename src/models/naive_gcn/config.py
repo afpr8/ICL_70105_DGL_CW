@@ -1,5 +1,5 @@
 # Standard Python library imports
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 # Local imports
 from src.utils.model_args import BaseModelArgs
@@ -7,7 +7,7 @@ from src.utils.model_args import BaseModelArgs
 @dataclass
 class NaiveGCNArgs(BaseModelArgs):
     lr: float = 1e-4
-    epochs: int = 1
+    epochs: int = 200
     batch_size: int = 1
     weight_decay: float = 0.0
 

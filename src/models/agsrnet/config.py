@@ -8,7 +8,7 @@ from src.utils.model_args import BaseModelArgs
 @dataclass
 class AGSRArgs(BaseModelArgs):
     lr: float = 1e-4
-    epochs: int = 2
+    epochs: int = 1
     lmbda: float = 16  # self-reconstruction loss weight
     lr_dim: int = 160
     hr_dim: int = 320  # padded 268 + 26*2

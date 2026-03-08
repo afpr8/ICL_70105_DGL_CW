@@ -4,7 +4,11 @@
 from src.datasets import load_data
 from src.models.agsrnet.config import AGSRArgs
 from src.models.agsrnet.model import AGSRNet
-from src.models.agsrnet.training import train_fold_agsr, train_full_and_predict
+from src.models.agsrnet.training import (
+    train_agsr,
+    train_fold_agsr,
+    train_full_and_predict
+)
 from src.training.train import run_3_fold_cross_validation
 from src.utils.core_utils import set_seed
 from src.utils.submission_utils import generate_submission
@@ -38,7 +42,9 @@ if __name__ == "__main__":
         lr_train,
         hr_train,
         lr_test,
-        model_args
+        AGSRNet,
+        model_args,
+        train_agsr
     )
 
     generate_submission(hr_predictions, output_path="./results/submission.csv")
