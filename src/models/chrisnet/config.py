@@ -11,7 +11,7 @@ from src.utils.model_args import BaseModelArgs
 @dataclass
 class ChrisNetArgs(BaseModelArgs):
     lr: float = 1e-4
-    epochs: int = 150
+    epochs: int = 200
     lmbda: float = 16  # self-reconstruction loss weight
     lr_dim: int = 160
     hr_dim: int = 320  # padded 268 + 26*2
@@ -27,7 +27,7 @@ class ChrisNetArgs(BaseModelArgs):
     weight_decay: float = 0.0
 
     # ChrisNet-specific hyperparameters
-    variant: Literal['full', 'community_only', 'topology_only', 'baseline'] = 'community_only'
+    variant: Literal['full', 'community_only', 'topology_only', 'baseline'] = 'full'
     K_communities: int = 7      # number of Louvain communities
     rank: int = 16              # low-rank correction dimension for CommunityAwareSRLayer
     threshold_pct: float = 80.0 # percentile threshold for Louvain input graph
