@@ -1,0 +1,31 @@
+# Package version requirements, latest stable minor versions compatible with GPU
+
+--index-url https://pypi.org/simple
+--extra-index-url https://download.pytorch.org/whl/cu121
+
+colorama==0.4.6
+filelock==3.25
+fsspec==2026.2
+Jinja2==3.1
+joblib==1.5
+MarkupSafe==3.0
+mlflow==3.10
+mpmath==1.3
+networkx==3.6
+numpy==2.4
+pandas==2.3
+pillow==12.1
+python-dateutil==2.9
+python-louvain==0.16
+scikit-learn==1.8
+scipy==1.17
+setuptools==82.0
+six==1.17
+sympy==1.13.1
+threadpoolctl==3.6
+torch==2.5.1+cu121
+torchvision==0.20.1+cu121
+torchaudio==2.5.1+cu121
+tqdm==4.67
+typing_extensions==4.15
+tzdata==2025.3
