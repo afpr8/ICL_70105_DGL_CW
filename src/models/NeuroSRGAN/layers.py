@@ -1,4 +1,4 @@
-# Architectural layers for ChrisNet (NeuroSRGAN)
+# Architectural layers for NeuroSRGAN
 
 # Third party imports
 import torch

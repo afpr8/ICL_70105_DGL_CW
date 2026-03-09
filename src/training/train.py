@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 # Local imports
 from src.datasets import BrainDataset, load_checkpoint
-from src.models.agsrnet.preprocessing import prepare_agsr_inputs
+from src.models.NeuroSRGAN.preprocessing import prepare_model_inputs
 from src.training.logging import log_metrics_fold
 from src.training.predict import get_prediction, predict
 from src.utils.core_utils import get_device
@@ -113,18 +113,11 @@ def run_3_fold_cross_validation(
     if log_to_mlflow:
         mlflow.set_experiment("DGBL-coursework")
         name = model_cls.__name__
-        if name == "AGSRNet":
-            title = (
-                f"{name}_Lr-{learning_rate}_"
-                f"lmbda-{model_args.lmbda}_"
-                f"K-{model_args.K}"
-            )
-        else:
-            title = (
-                f"{name}_bs-{batch_size}_"
-                f"Lr-{learning_rate}_"
-                f"Wd-{weight_decay}"
-            )
+        title = (
+            f"{name}_bs-{batch_size}_"
+            f"Lr-{learning_rate}_"
+            f"Wd-{weight_decay}"
+        )
         mlflow.start_run(run_name=title)
         mlflow.log_params(asdict(model_args))
 
@@ -383,7 +376,7 @@ def train_fold(
         log_to_mlflow=log_to_mlflow,
         loss_fn=loss_fn
     )
-    val_dataset_prepared = prepare_agsr_inputs(val_dataset, model_args)
+    val_dataset_prepared = prepare_model_inputs(val_dataset, model_args)
     val_preds = predict(model, val_dataset_prepared)
 
     return val_preds

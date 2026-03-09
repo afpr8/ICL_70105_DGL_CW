@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from src.datasets import BrainDataset
-from src.models.dummy_model import DummyModel
+from tests.dummy_model import DummyModel
 from src.training.train import (
     run_3_fold_cross_validation,
     train_fold,

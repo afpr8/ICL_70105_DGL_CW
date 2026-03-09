@@ -3,7 +3,7 @@
 NeuroSRGAN is a graph neural network for brain connectome super-resolution:
 given a low-resolution (LR) brain connectivity graph (160 nodes), it predicts
 the corresponding high-resolution (HR) graph (268 nodes). It extends the
-ArgsNet architecture with two novel neurodynamically motivated contributions:
+AGSRNet architecture with two novel neurodynamically motivated contributions:
 (1) a community-aware spectral super-resolution layer that refines the global
 spectral resolution jump with learned per-community residual corrections, and
 (2) a topology-aware discriminator that evaluates the structural realism of
@@ -74,7 +74,7 @@ HR adjacency prediction (320×320, padded)
 
 ### Contribution 1 — Community-Aware Spectral SR via Residual Community Modulation
 
-ArgsNet's GSRLayer performs the LR → HR resolution jump via a single global
+AGSRNet's GSRLayer performs the LR → HR resolution jump via a single global
 eigendecomposition, treating the brain graph as a homogeneous structure and
 ignoring its well-established functional community organisation. We augment
 the global spectral SR with learned per-community residual corrections:
@@ -109,7 +109,7 @@ training and cached per-subject.
 
 ### Contribution 2 — Topology-Aware Adversarial Training
 
-ArgsNet's discriminator evaluates realism purely from edge weight values and
+AGSRNet's discriminator evaluates realism purely from edge weight values and
 can be fooled by graphs with plausible weight distributions but unrealistic
 topology. We augment the discriminator with a compact topological fingerprint
 computed from the predicted HR adjacency:
@@ -175,12 +175,12 @@ Variant "topology_only" — NeuroSRGAN-D:
         GSRLayer + TopologyAwareDiscriminator
         Isolates Contribution 2
 
-Variant "baseline" — ≈ ArgsNet:
+Variant "baseline" — ≈ AGSRNet:
         GSRLayer + StandardDiscriminator
         No novel contributions
 ```
 
-Selected via `ChrisNetArgs(variant=...)` in `config.py`.
+Selected via `NeuroSRGANArgs(variant=...)` in `config.py`.
 
 ---
 
@@ -190,13 +190,13 @@ Selected via `ChrisNetArgs(variant=...)` in `config.py`.
 ```
 Â = D^{-1/2} A D^{-1/2}
 ```
-Unchanged from ArgsNet. Bounds spectral radius to [-1,1] for stable gradient
+Unchanged from AGSRNet. Bounds spectral radius to [-1,1] for stable gradient
 flow during propagation.
 
 ---
 
 ### 2. `GraphUnet` — Hierarchical Encoder-Decoder
-Unchanged from ArgsNet. Extracts multi-scale LR features via alternating
+Unchanged from AGSRNet. Extracts multi-scale LR features via alternating
 GraphPool (learnable top-k coarsening) and GraphUnpool (index-based restoration)
 with skip connections. Pool ratios: [0.9, 0.7, 0.6, 0.5].
 Output `net_outs` has shape 160×320 — each of the 160 LR nodes carries a
@@ -245,7 +245,7 @@ with small random noise (×0.001) for symmetry breaking.
 ---
 
 ### 4. `GraphConvolution` × 2 — HR Graph Refinement
-Unchanged from ArgsNet. Two stacked Kipf & Welling GCN layers smooth local
+Unchanged from AGSRNet. Two stacked Kipf & Welling GCN layers smooth local
 inconsistencies in Z_HR by propagating features across the estimated HR graph:
 
 ```
@@ -302,9 +302,9 @@ During training:
 
 ---
 
-### 7. `StandardDiscriminator` — ArgsNet-Style Critic
+### 7. `StandardDiscriminator` — AGSRNet-Style Critic
 Used in `community_only` and `baseline` variants. Operates row-by-row on the
-320×320 matrix (same as ArgsNet's original Discriminator). Output shape: (320, 1).
+320×320 matrix (same as AGSRNet's original Discriminator). Output shape: (320, 1).
 
 ---
 
@@ -337,7 +337,7 @@ Training loop (per subject, shuffled each epoch):
 ```
 
 Note: `d_real` and `d_fake` labels are swapped relative to standard GAN
-convention (matching original ArgsNet behaviour): the model output is labelled
+convention (matching original AGSRNet behaviour): the model output is labelled
 "real" and the (noisy) ground truth is labelled "fake".
 
 ---
@@ -389,29 +389,16 @@ Both reported as MAE between predicted and ground-truth values across subjects.
 
 ---
 
-## Ablation Results
-
-| Model | MAE | PCC | JSD | MAE-PC | MAE-EC | MAE-BC | MAE-GE | MAE-Q |
-|---|---|---|---|---|---|---|---|---|
-| ArgsNet (baseline) | - | - | - | - | - | - | - | - |
-| community_only | - | - | - | - | - | - | - | - |
-| topology_only | - | - | - | - | - | - | - | - |
-| NeuroSRGAN (full) | - | - | - | - | - | - | - | - |
-
-*To be completed with 3-fold CV results.*
-
----
-
 ## Summary Table
 
-| Component | Role | vs ArgsNet |
+| Component | Role | vs AGSRNet |
 |---|---|---|
 | `normalize_adj_torch` | Symmetric normalisation | Unchanged |
 | `GraphUnet` | Multi-scale LR feature extraction | Unchanged |
 | `GSRLayer` | Global spectral SR 160→320 | Unchanged |
 | `CommunityAwareSRLayer` | Residual community modulation | **Novel — wraps GSRLayer** |
 | `GraphConvolution` × 2 | HR graph refinement | Unchanged |
-| `StandardDiscriminator` | ArgsNet-style critic (ablation use) | Unchanged |
+| `StandardDiscriminator` | AGSRNet-style critic (ablation use) | Unchanged |
 | `TopologyAwareDiscriminator` | Neurodynamic realism critic | **Novel — extends Discriminator** |
 | `gaussian_noise_layer` | GAN training stabilisation (std=0 currently) | Unchanged |
 

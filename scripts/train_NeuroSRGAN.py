@@ -1,12 +1,16 @@
-# The main entry point to train ChrisNet and generate predictions and save them
+# The main entry point to train NeuroSRGAN and generate predictions and save them
 # to submission.csv for evaluation
 
 from src.utils.submission_utils import generate_submission
 from src.utils.core_utils import set_seed
 from src.training.train import run_3_fold_cross_validation
-from src.models.chrisnet.training import train_fold_chrisnet, train_full_and_predict
-from src.models.chrisnet.model import ChrisNet
-from src.models.chrisnet.config import ChrisNetArgs
+from src.models.NeuroSRGAN.training import (
+    train_neurosrgan,
+    train_fold_neurosrgan,
+    train_full_and_predict
+)
+from src.models.NeuroSRGAN.model import NeuroSRGAN
+from src.models.NeuroSRGAN.config import NeuroSRGANArgs
 from src.datasets import load_data
 import os
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
@@ -18,11 +22,11 @@ if __name__ == "__main__":
 
     lr_train, hr_train = load_data()
 
-    model_args = ChrisNetArgs()  # variant='full' by default
+    model_args = NeuroSRGANArgs()  # variant='full' by default
 
     run_3_fold_cross_validation(
-        train_fold_chrisnet,
-        ChrisNet,
+        train_fold_neurosrgan,
+        NeuroSRGAN,
         model_args,
         lr_train,
         hr_train,
@@ -39,9 +43,9 @@ if __name__ == "__main__":
         lr_train,
         hr_train,
         lr_test,
-        ChrisNet,
+        NeuroSRGAN,
         model_args,
-        train_chrisnet
+        train_neurosrgan
     )
 
     generate_submission(hr_predictions, output_path="./results/submission.csv")
