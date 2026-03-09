@@ -266,7 +266,7 @@ def train_model(
     val_dataset: BrainDataset | None = None,
     fold_id: int | None = None,
     log_to_mlflow: bool = False,
-    loss_fn: torch.nn.Module | None = None,
+    loss_fn: torch.nn.Module | None = None
 ) -> torch.nn.Module:
     """
     Train a generic model with optional validation and MLflow logging
@@ -282,6 +282,8 @@ def train_model(
     Returns:
         torch.nn.Module: Trained model
     """
+    if loss_fn is None:
+        loss_fn = torch.nn.L1Loss()
     model.to(DEVICE)
     train_loader = DataLoader(
         train_dataset,

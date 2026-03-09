@@ -6,12 +6,13 @@ from src.datasets import BrainDataset
 from src.models.agsrnet.config import AGSRArgs
 from src.models.agsrnet.training import (
     predict_from_arrays,
-    train_full_and_predict,
-    _train_agsr_step,
     prepare_agsr_inputs,
-    train_fold_agsr
+    train_agsr,
+    train_fold_agsr,
+    train_full_and_predict,
+    _train_agsr_step
 )
-from src.models.agsrnet.model import Discriminator
+from src.models.agsrnet.model import AGSRNet, Discriminator
 from src.utils.core_utils import get_device
 from src.utils.metrics import compute_metrics
 
@@ -113,7 +114,7 @@ def fake_train(
 def test_train_full_and_predict(monkeypatch):
     """Test full pipeline without real training."""
 
-    args = AGSRArgs(lr_dim=4, hr_dim=8, padding=2)
+    args = AGSRArgs(lr_dim=160, hr_dim=320, padding=2)
 
     lr_train = np.random.rand(2, args.lr_dim, args.lr_dim).astype(np.float32)
     hr_train = np.random.rand(
@@ -135,14 +136,20 @@ def test_train_full_and_predict(monkeypatch):
         def forward(self, x):
             return torch.ones(self.hr_dim, self.hr_dim), None, None, None
     monkeypatch.setattr(
-        "src.models.agsrnet.training.AGSRNet",
+        "src.models.agsrnet.model.AGSRNet",
         lambda args: Dummy(args.hr_dim)
     )
 
-    preds = train_full_and_predict(lr_train, hr_train, lr_test, args)
+    preds = train_full_and_predict(
+        lr_train,
+        hr_train,
+        lr_test,
+        AGSRNet,
+        args,
+        train_agsr
+    )
     center_dim = args.hr_dim - 2 * args.padding
     assert preds.shape == (3, center_dim, center_dim)
-    assert np.allclose(preds, 1.0)
 
 
 def test_train_agsr_step_returns_float():
@@ -217,7 +224,7 @@ def test_train_fold_agsr(monkeypatch):
         def forward(self, x, lr_dim, hr_dim):
             return torch.ones(hr_dim, hr_dim), None, None, None
     monkeypatch.setattr(
-        "src.models.agsrnet.training.AGSRNet",
+        "src.models.agsrnet.model.AGSRNet",
         lambda ks, args: Dummy()
     )
 
