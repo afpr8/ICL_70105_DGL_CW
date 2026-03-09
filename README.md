@@ -9,7 +9,7 @@
 
 ## Running The Full Pipeline !
 In your terminal:
-- cd into the root folder of the repo (`ICL_70105_DGL_CW`)
+- `cd` into the root folder of the repo (`ICL_70105_DGL_CW`)
 - Create a virtualenv. Eg. `python3 -m venv venv`
 - Install dependencies. Eg. `pip install -r _______` (see below for more details)
 - Run the full training pipeline via `python3 -m scripts.train_NeuroSRGAN`
