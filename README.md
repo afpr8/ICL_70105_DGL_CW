@@ -14,7 +14,7 @@ Brain graph super-resolution aims to reconstruct high-resolution (HR) connectivi
 - Preserving Topology: The brain functions as a complex, modular network; successful super-resolution must maintain critical topological features like global efficiency and clustering coefficients to ensure the HR graph remains biologically plausible.
 - Inductive Learning: Unlike transductive approaches, using an inductive GNN allows for the discovery of generalizable connectivity rules, enabling the model to accurately predict HR graphs for unseen subjects.
 
-## ChrisNet - Methodology
+## NeuroSRGAN - Methodology
 
 - Summarize in a few sentences the building blocks of your generative GNN model.
 

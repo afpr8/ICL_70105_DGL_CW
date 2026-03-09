@@ -2,8 +2,8 @@ import numpy as np
 import torch
 
 from src.datasets import BrainDataset
-from src.models.agsrnet.config import AGSRArgs
-from src.models.agsrnet.preprocessing import prepare_agsr_inputs
+from src.utils.model_args import BaseModelArgs
+from src.models.NeuroSRGAN.preprocessing import prepare_model_inputs
 from src.utils.core_utils import get_device
 from src.utils.data_utils import pad_HR_adj, prepare_tensors
 
@@ -24,7 +24,7 @@ def make_dummy_arrays(lr_dim=4, hr_dim=8, padding=2):
 # ----------------------------
 
 def test_prepare_tensors_returns_correct_types_and_device():
-    args = AGSRArgs(lr_dim=4, hr_dim=8, padding=2)
+    args = BaseModelArgs(lr_dim=4, hr_dim=8, padding=2)
 
     lr_np = np.random.rand(args.lr_dim, args.lr_dim).astype(np.float32)
     hr_np = np.random.rand(
@@ -57,11 +57,11 @@ def test_prepare_tensors_returns_correct_types_and_device():
     assert torch.all(diag == 1)
 
 # ----------------------------
-# Tests for prepare_agsr_inputs
+# Tests for prepare_model_inputs
 # ----------------------------
 
-def test_prepare_agsr_inputs_returns_BrainDataset():
-    args = AGSRArgs(lr_dim=4, hr_dim=8, padding=2)
+def test_prepare_model_inputs_returns_BrainDataset():
+    args = BaseModelArgs(lr_dim=4, hr_dim=8, padding=2)
 
     # Create dummy BrainDataset with torch tensors
     dataset = []
@@ -78,7 +78,7 @@ def test_prepare_agsr_inputs_returns_BrainDataset():
         torch.stack([x[1] for x in dataset])
     )
 
-    prepared_ds = prepare_agsr_inputs(ds, args)
+    prepared_ds = prepare_model_inputs(ds, args)
     assert isinstance(prepared_ds, BrainDataset)
     assert len(prepared_ds) == len(ds)
 

@@ -1,4 +1,4 @@
-# ChrisNet (NeuroSRGAN) model and associated neural network components
+# NeuroSRGAN model and associated neural network components
 
 # Standard library imports
 from typing import Literal
@@ -16,9 +16,9 @@ from .ops import GraphUnet
 from .preprocessing import normalize_adj_torch
 
 
-class ChrisNet(torch.nn.Module):
+class NeuroSRGAN(torch.nn.Module):
     """
-    ChrisNet (NeuroSRGAN) — Neurodynamics-Informed Spectral Super-Resolution GAN
+    NeuroSRGAN — Neurodynamics-Informed Spectral Super-Resolution GAN
 
     Reconstructs a high-resolution brain connectivity graph from a
     low-resolution adjacency matrix. Extends AGSRNet with two novel
@@ -30,7 +30,7 @@ class ChrisNet(torch.nn.Module):
         'baseline'      — GSRLayer + StandardDiscriminator (≈ AGSRNet)
 
     Params:
-        args: Configuration object (ChrisNetArgs) containing model hyperparameters
+        args: Configuration object (NeuroSRGANArgs) containing model hyperparameters
     """
     def __init__(self, args) -> None:
         super().__init__()
@@ -69,7 +69,7 @@ class ChrisNet(torch.nn.Module):
             masks: list[torch.Tensor] | None = None
         ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
-        Forward pass of ChrisNet
+        Forward pass of NeuroSRGAN
 
         Params:
             lr: Low-resolution adjacency matrix of shape (lr_dim, lr_dim)

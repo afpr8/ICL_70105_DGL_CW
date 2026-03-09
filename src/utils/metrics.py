@@ -357,9 +357,9 @@ def compute_metrics(
     Compute evaluation metrics for a dataset using the generator model
 
     Params:
-        model: Trained AGSRNet generator
+        model: Trained generator
         dataset: BrainDataset containing LR-HR pairs
-        args: AGSRArgs with padding, lr_dim, hr_dim
+        args: BaseModelArgs with padding, lr_dim, hr_dim
     Returns:
         dict[str, float]: Computed metrics (e.g., MSE, PSNR) for the dataset
     """

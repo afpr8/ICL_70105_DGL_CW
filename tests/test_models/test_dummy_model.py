@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from src.models.dummy_model import DummyModel
+from tests.dummy_model import DummyModel
 from src.utils.core_utils import get_device
 
 DEVICE, PIN_MEMORY = get_device()

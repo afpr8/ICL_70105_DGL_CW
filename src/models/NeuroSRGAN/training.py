@@ -1,4 +1,4 @@
-# Training utilities for ChrisNet (NeuroSRGAN)
+# Training utilities for NeuroSRGAN
 
 # Standard library imports
 from typing import Type
@@ -10,16 +10,16 @@ from torch.utils.data import DataLoader
 
 # Local imports
 from src.datasets import BrainDataset
-from src.models.chrisnet.config import ChrisNetArgs
-from src.models.chrisnet.model import (
-    ChrisNet,
+from src.models.NeuroSRGAN.config import NeuroSRGANArgs
+from src.models.NeuroSRGAN.model import (
+    NeuroSRGAN,
     StandardDiscriminator,
     TopologyAwareDiscriminator,
     gaussian_noise_layer,
     to_networkx,
     compute_topo_features,
 )
-from src.models.chrisnet.preprocessing import (
+from src.models.NeuroSRGAN.preprocessing import (
     compute_community_masks,
     prepare_tensors,
 )
@@ -32,7 +32,7 @@ DEVICE, PIN_MEMORY = get_device()
 
 def _precompute_gt_topo(
         dataset: BrainDataset,
-        args: ChrisNetArgs
+        args: NeuroSRGANArgs
     ) -> list[torch.Tensor]:
     """
     Pre-compute ground-truth topology features for every sample in the dataset.
@@ -40,7 +40,7 @@ def _precompute_gt_topo(
 
     Params:
         dataset: BrainDataset containing LR-HR pairs
-        args: ChrisNetArgs with padding info
+        args: NeuroSRGANArgs with padding info
     Returns:
         List of topology tensors [SWI, GE, Q] of shape (3,), one per sample
     """
@@ -62,8 +62,8 @@ def _precompute_gt_topo(
     return gt_topos
 
 
-def _train_chrisnet_step(
-    model: ChrisNet,
+def _train_neurosrgan_step(
+    model: NeuroSRGAN,
     netD: torch.nn.Module,
     lr_t: torch.Tensor,
     padded_hr: torch.Tensor,
@@ -71,7 +71,7 @@ def _train_chrisnet_step(
     gt_topo: torch.Tensor | None,
     optimizerG: torch.optim.Optimizer,
     optimizerD: torch.optim.Optimizer,
-    args: ChrisNetArgs,
+    args: NeuroSRGANArgs,
     loss_fn: torch.nn.Module | None = None,
 ) -> float:
     """
@@ -79,7 +79,7 @@ def _train_chrisnet_step(
     generator and discriminator updates
 
     Params:
-        model: ChrisNet generator
+        model: NeuroSRGAN generator
         netD: Discriminator (StandardDiscriminator or TopologyAwareDiscriminator)
         lr_t: LR input tensor of shape (lr_dim, lr_dim)
         padded_hr: Padded HR target tensor of shape (hr_dim, hr_dim)
@@ -89,13 +89,13 @@ def _train_chrisnet_step(
             or None for variants that do not use the topology discriminator
         optimizerG: Optimizer for the generator
         optimizerD: Optimizer for the discriminator
-        args: ChrisNetArgs hyperparameters
+        args: NeuroSRGANArgs hyperparameters
         loss_fn: Unused; present for API consistency. Must be None
     Returns:
         Total generator + reconstruction loss for this step
     """
     if loss_fn is not None:
-        raise ValueError("No loss_fn parameter is expected for ChrisNet")
+        raise ValueError("No loss_fn parameter is expected for NeuroSRGAN")
 
     mse_loss_fn = torch.nn.MSELoss()
     bce_loss_fn = torch.nn.BCELoss()
@@ -171,31 +171,31 @@ def _train_chrisnet_step(
     return (gen_loss + mse_loss).item()
 
 
-def train_chrisnet(
-    model: ChrisNet,
+def train_neurosrgan(
+    model: NeuroSRGAN,
     train_dataset: BrainDataset,
-    model_args: ChrisNetArgs,
+    model_args: NeuroSRGANArgs,
     val_dataset: BrainDataset | None = None,
     fold_id: int | None = None,
     log_to_mlflow: bool = False,
     loss_fn: torch.nn.Module | None = None,
-) -> ChrisNet:
+) -> NeuroSRGAN:
     """
-    Train ChrisNet generator with optional validation and MLflow logging.
+    Train NeuroSRGAN generator with optional validation and MLflow logging
 
     Community masks and (for topology variants) GT topology features are
-    precomputed once before training begins and cached for all epochs.
+    precomputed once before training begins and cached for all epochs
 
     Params:
-        model: ChrisNet instance to train
+        model: NeuroSRGAN instance to train
         train_dataset: Training BrainDataset
-        model_args: ChrisNetArgs hyperparameters
+        model_args: NeuroSRGANArgs hyperparameters
         val_dataset: Optional validation BrainDataset
         fold_id: Optional fold ID for logging
         log_to_mlflow: If True, log per-epoch metrics to MLflow
         loss_fn: Unused; must be None
     Returns:
-        Trained ChrisNet model
+        Trained NeuroSRGAN model
     """
     model.to(DEVICE)
 
@@ -257,7 +257,7 @@ def train_chrisnet(
             )
 
             epoch_loss.append(
-                _train_chrisnet_step(
+                _train_neurosrgan_step(
                     model,
                     netD,
                     lr_t,
@@ -295,22 +295,22 @@ def train_chrisnet(
     return model
 
 
-def train_fold_chrisnet(
-        model: ChrisNet,
+def train_fold_neurosrgan(
+        model: NeuroSRGAN,
         train_dataset: BrainDataset,
-        model_args: ChrisNetArgs,
+        model_args: NeuroSRGANArgs,
         val_dataset: BrainDataset | None = None,
         fold_id: int | None = None,
         log_to_mlflow: bool = True,
         loss_fn: torch.nn.Module | None = None,
     ) -> list[tuple[torch.Tensor, torch.Tensor]]:
     """
-    Train ChrisNet on a cross-validation fold and return validation predictions
+    Train NeuroSRGAN on a cross-validation fold and return validation predictions
 
     Params:
-        model: ChrisNet instance to train
+        model: NeuroSRGAN instance to train
         train_dataset: Training BrainDataset
-        model_args: ChrisNetArgs hyperparameters
+        model_args: NeuroSRGANArgs hyperparameters
         val_dataset: Validation BrainDataset
         fold_id: Fold identifier for logging
         log_to_mlflow: If True, log metrics to MLflow
@@ -319,7 +319,7 @@ def train_fold_chrisnet(
         Validation predictions paired with ground truth,
             list of (pred, target) tensor tuples
     """
-    model = train_chrisnet(
+    model = train_neurosrgan(
         model,
         train_dataset,
         model_args,
@@ -351,17 +351,17 @@ def train_fold_chrisnet(
 
 
 def compute_metrics(
-        model: ChrisNet,
+        model: NeuroSRGAN,
         dataset: BrainDataset,
-        args: ChrisNetArgs
+        args: NeuroSRGANArgs
     ) -> dict[str, float]:
     """
     Compute evaluation metrics for a dataset using the generator model
 
     Params:
-        model: Trained ChrisNet generator
+        model: Trained NeuroSRGAN generator
         dataset: BrainDataset containing LR-HR pairs
-        args: ChrisNetArgs with padding, lr_dim, hr_dim, and community params
+        args: NeuroSRGANArgs with padding, lr_dim, hr_dim, and community params
     Returns:
         Computed metrics (e.g., MAE, PCC) for the dataset
     """
@@ -395,17 +395,17 @@ def compute_metrics(
 
 
 def predict_from_arrays(
-        model: ChrisNet,
+        model: NeuroSRGAN,
         lr_arrays: np.ndarray,
-        model_args: ChrisNetArgs
+        model_args: NeuroSRGANArgs
     ) -> np.ndarray:
     """
     Predict high-resolution outputs from low-resolution arrays
 
     Params:
-        model: Trained ChrisNet generator
+        model: Trained generator
         lr_arrays: NumPy array of LR inputs, shape (N, lr_dim, lr_dim)
-        model_args: ChrisNetArgs with hr_dim, padding, and community params
+        model_args: NeuroSRGANArgs with hr_dim, padding, and community params
     Returns:
         Predicted HR arrays of shape (N, center_dim, center_dim)
     """
@@ -443,11 +443,11 @@ def train_full_and_predict(
         hr_train: np.ndarray,
         lr_test: np.ndarray,
         model_cls: Type[torch.nn.Module],
-        model_args: ChrisNetArgs,
+        model_args: NeuroSRGANArgs,
         trainer_fn # Single fold function, not one with fold in name!!
     ) -> np.ndarray:
     """
-    Train ChrisNet on full training data, then predict HR for test LR arrays
+    Train NeuroSRGAN on full training data, then predict HR for test LR arrays
 
     Params:
         lr_train: NumPy array of LR training samples
@@ -456,7 +456,7 @@ def train_full_and_predict(
             shape (N_train, center_dim, center_dim)
         lr_test: NumPy array of LR test samples, shape (N_test, lr_dim, lr_dim)
         model_cls: The type of model to train
-        model_args: ChrisNetArgs instance with training hyperparameters
+        model_args: NeuroSRGANArgs instance with training hyperparameters
     Returns:
         Predicted HR arrays, shape (N_test, center_dim, center_dim)
     """

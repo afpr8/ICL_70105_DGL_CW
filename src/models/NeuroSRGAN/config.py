@@ -1,4 +1,4 @@
-# Configuration for ChrisNet (NeuroSRGAN)
+# Configuration for NeuroSRGAN
 
 # Standard Python library imports
 from dataclasses import dataclass, field
@@ -9,7 +9,7 @@ from src.utils.model_args import BaseModelArgs
 
 
 @dataclass
-class ChrisNetArgs(BaseModelArgs):
+class NeuroSRGANArgs(BaseModelArgs):
     lr: float = 1e-4
     epochs: int = 200
     lmbda: float = 16  # self-reconstruction loss weight
@@ -26,7 +26,7 @@ class ChrisNetArgs(BaseModelArgs):
     batch_size: int = 1
     weight_decay: float = 0.0
 
-    # ChrisNet-specific hyperparameters
+    # NeuroSRGAN-specific hyperparameters
     variant: Literal['full', 'community_only', 'topology_only', 'baseline'] = 'full'
     K_communities: int = 7      # number of Louvain communities
     rank: int = 16              # low-rank correction dimension for CommunityAwareSRLayer

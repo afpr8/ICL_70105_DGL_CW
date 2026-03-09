@@ -58,7 +58,7 @@ def prepare_tensors(
     Params:
         lr_np: Low-resolution input array of shape (LR_dim, LR_dim)
         hr_np: High-resolution target array of shape (center_dim, center_dim)
-        args: AGSRArgs containing padding and device info
+        args: BaseModelArgs containing padding and device info
     Returns:
         Tuple[torch.Tensor, torch.Tensor]:
             lr_t: LR tensor, shape (LR_dim, LR_dim), float32, on DEVICE

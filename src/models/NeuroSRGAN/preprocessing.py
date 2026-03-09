@@ -1,4 +1,4 @@
-# Data loading and preprocessing utilities for ChrisNet (NeuroSRGAN)
+# Data loading and preprocessing utilities for NeuroSRGAN
 
 # Standard library imports
 import os
@@ -12,8 +12,9 @@ import torch
 
 # Local imports
 from src.datasets import BrainDataset
-from src.models.chrisnet.config import ChrisNetArgs
+from src.models.NeuroSRGAN.config import NeuroSRGANArgs
 from src.utils.core_utils import get_device
+from src.utils.model_args import BaseModelArgs
 
 DEVICE, PIN_MEMORY = get_device()
 
@@ -165,7 +166,7 @@ def data() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
 
 def compute_community_masks(
         lr_adj: np.ndarray,
-        args: ChrisNetArgs
+        args: NeuroSRGANArgs
     ) -> list[torch.Tensor]:
     """
     Compute binary HR community masks from a LR adjacency matrix
@@ -180,7 +181,7 @@ def compute_community_masks(
 
     Params:
         lr_adj: LR adjacency matrix of shape (lr_dim, lr_dim)
-        args: ChrisNetArgs containing K_communities, threshold_pct, hr_dim, padding
+        args: NeuroSRGANArgs containing K_communities, threshold_pct, hr_dim, padding
     Returns:
         List of K_communities binary mask tensors, each of shape (hr_dim, hr_dim),
             on DEVICE
@@ -235,7 +236,7 @@ def compute_community_masks(
 def prepare_tensors(
         lr_np: np.ndarray | torch.Tensor,
         hr_np: np.ndarray | torch.Tensor,
-        args: ChrisNetArgs
+        args: NeuroSRGANArgs
     ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Convert numpy LR and HR arrays to PyTorch tensors on the correct device
@@ -244,7 +245,7 @@ def prepare_tensors(
     Params:
         lr_np: Low-resolution input array of shape (lr_dim, lr_dim)
         hr_np: High-resolution target array of shape (center_dim, center_dim)
-        args: ChrisNetArgs containing padding and device info
+        args: NeuroSRGANArgs containing padding and device info
     Returns:
         lr_t: LR tensor, shape (lr_dim, lr_dim), float32, on DEVICE
         padded_hr: Padded HR tensor, shape (hr_dim, hr_dim), float32, on DEVICE
@@ -266,19 +267,23 @@ def prepare_tensors(
     return lr_t, padded_hr
 
 
-def prepare_chrisnet_inputs(
+def prepare_neurosrgan_inputs(
         dataset: BrainDataset,
-        args: ChrisNetArgs
+        args: NeuroSRGANArgs
     ) -> tuple[BrainDataset, list[list[torch.Tensor]]]:
     """
-    Prepare a BrainDataset for ChrisNet inference, including community masks
+    Prepare a BrainDataset for NeuroSRGANArgs inference, including community
+        masks
 
     Params:
         dataset: Dataset containing LR-HR adjacency matrix pairs
-        args: ChrisNetArgs containing lr_dim, hr_dim, padding, and community params
+        args: NeuroSRGANArgs containing lr_dim, hr_dim, padding, and community
+            params
     Returns:
-        prepared_dataset: BrainDataset with tensors prepared for ChrisNet inference
-        all_masks: List of per-sample community mask lists, each of length K_communities
+        prepared_dataset: BrainDataset with tensors prepared for NeuroSRGANArgs
+            inference
+        all_masks: List of per-sample community mask lists, each of length
+            K_communities
     """
     prepared_data = []
     all_masks = []
@@ -298,3 +303,29 @@ def prepare_chrisnet_inputs(
     inputs, targets = zip(*prepared_data)
 
     return BrainDataset(torch.stack(inputs), torch.stack(targets)), list(all_masks)
+
+
+def prepare_model_inputs(
+    dataset: BrainDataset,
+    args: BaseModelArgs
+) -> BrainDataset:
+    """
+    Prepare a BrainDataset for inference
+
+    Params:
+        dataset: Dataset containing LR-HR adjacency matrix pairs
+        args: Model configuration containing lr_dim, hr_dim, and padding
+
+    Returns:
+        BrainDataset: Dataset with tensors prepared for inference
+    """
+    prepared_data = []
+
+    for lr_np, hr_np in dataset:
+        lr_t, padded_hr = prepare_tensors(lr_np, hr_np, args)
+
+        prepared_data.append((lr_t.squeeze(0), padded_hr.squeeze(0)))
+
+    inputs, targets = zip(*prepared_data)    
+
+    return BrainDataset(torch.stack(inputs), torch.stack(targets))

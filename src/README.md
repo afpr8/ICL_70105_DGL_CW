@@ -180,7 +180,7 @@ Variant "baseline" — ≈ ArgsNet:
         No novel contributions
 ```
 
-Selected via `ChrisNetArgs(variant=...)` in `config.py`.
+Selected via `NeuroSRGANArgs(variant=...)` in `config.py`.
 
 ---
 
