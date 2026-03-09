@@ -1,19 +1,19 @@
 # The main entry point to train ChrisNet and generate predictions and save them
 # to submission.csv for evaluation
 
+from src.utils.submission_utils import generate_submission
+from src.utils.core_utils import set_seed
+from src.training.train import run_3_fold_cross_validation
+from src.models.chrisnet.training import train_fold_chrisnet, train_full_and_predict
+from src.models.chrisnet.model import ChrisNet
+from src.models.chrisnet.config import ChrisNetArgs
+from src.datasets import load_data
 import os
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
-from src.datasets import load_data
-from src.models.chrisnet.config import ChrisNetArgs
-from src.models.chrisnet.model import ChrisNet
-from src.models.chrisnet.training import train_fold_chrisnet, train_full_and_predict
-from src.training.train import run_3_fold_cross_validation
-from src.utils.core_utils import set_seed
-from src.utils.submission_utils import generate_submission
 
 if __name__ == "__main__":
-    SEED = 42
+    SEED = 44
     set_seed(SEED)
 
     lr_train, hr_train = load_data()
