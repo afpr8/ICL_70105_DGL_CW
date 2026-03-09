@@ -13,7 +13,8 @@ In your terminal:
 - Create a virtualenv. Eg. `python3 -m venv venv`
 - Install dependencies. Eg. `pip install -r _______` (see below for more details)
 - Run the full training pipeline via `python3 -m scripts.train_NeuroSRGAN`
-- Watch your terminal for training updates and check the `results` folder for plots and CSVs!
+      - Our final chosen hyperparameters are in the dataclass NeuroSRGANArgs (instantiated on line 25 of the main script), here you can reduce epochs to save time running the whole script.
+- Watch your terminal for training updates and check the `/results` folder for plots and CSVs!
 
 ### Used External Libraries
 - If running the code on a GPU please run `pip install -r gpu_requirements.txt`
