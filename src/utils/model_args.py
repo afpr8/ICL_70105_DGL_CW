@@ -8,3 +8,4 @@ class BaseModelArgs:
     batch_size: int
     epochs: int
     weight_decay: float
+    padding: int

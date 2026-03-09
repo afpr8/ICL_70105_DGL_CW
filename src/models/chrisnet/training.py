@@ -1,5 +1,8 @@
 # Training utilities for ChrisNet (NeuroSRGAN)
 
+# Standard library imports
+from typing import Type
+
 # Third party imports
 import numpy as np
 import torch
@@ -439,7 +442,9 @@ def train_full_and_predict(
         lr_train: np.ndarray,
         hr_train: np.ndarray,
         lr_test: np.ndarray,
-        model_args: ChrisNetArgs
+        model_cls: Type[torch.nn.Module],
+        model_args: ChrisNetArgs,
+        trainer_fn # Single fold function, not one with fold in name!!
     ) -> np.ndarray:
     """
     Train ChrisNet on full training data, then predict HR for test LR arrays
@@ -450,6 +455,7 @@ def train_full_and_predict(
         hr_train: NumPy array of HR training samples
             shape (N_train, center_dim, center_dim)
         lr_test: NumPy array of LR test samples, shape (N_test, lr_dim, lr_dim)
+        model_cls: The type of model to train
         model_args: ChrisNetArgs instance with training hyperparameters
     Returns:
         Predicted HR arrays, shape (N_test, center_dim, center_dim)
@@ -459,9 +465,10 @@ def train_full_and_predict(
         torch.tensor(hr_train, dtype=torch.float32)
     )
 
-    model = ChrisNet(model_args)
+    model = model_cls(model_args) if model_args is not None else model_cls()
+    model = model.to(DEVICE)
 
-    model = train_chrisnet(
+    model = trainer_fn(
         model,
         full_train_dataset,
         model_args,

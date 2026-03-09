@@ -35,6 +35,13 @@ if __name__ == "__main__":
     print("\n===== Generating Test Submission =====")
     lr_test, _ = load_data(hr_path=None, lr_path="data/lr_test.csv")
 
-    hr_predictions = train_full_and_predict(lr_train, hr_train, lr_test, model_args)
+    hr_predictions = train_full_and_predict(
+        lr_train,
+        hr_train,
+        lr_test,
+        ChrisNet,
+        model_args,
+        train_chrisnet
+    )
 
     generate_submission(hr_predictions, output_path="./results/submission.csv")

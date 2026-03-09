@@ -1,5 +1,8 @@
 # File to train the agsrnet model architecture as a baseline for evaluation
 
+# Standard library imports
+from typing import Type
+
 # Third party imports
 import numpy as np
 import torch
@@ -9,18 +12,15 @@ from torch.utils.data import DataLoader
 from src.datasets import BrainDataset
 from src.models.agsrnet.config import AGSRArgs
 from src.models.agsrnet.model import (
-    AGSRNet,
     Discriminator,
     gaussian_noise_layer
 )
-from src.models.agsrnet.preprocessing import (
-    prepare_agsr_inputs,
-    prepare_tensors
-)
+from src.models.agsrnet.preprocessing import prepare_agsr_inputs
 from src.training.logging import log_metrics_fold
 from src.training.predict import predict
 from src.utils.core_utils import get_device
-from src.utils.metrics import get_metrics
+from src.utils.data_utils import prepare_tensors
+from src.utils.metrics import compute_metrics
 
 DEVICE, PIN_MEMORY = get_device()
 
@@ -150,8 +150,8 @@ def train_agsr(
 
         for lr_np, hr_np in train_loader:
             lr_t, padded_hr = prepare_tensors(
-                lr_np.squeeze(0).numpy(),
-                hr_np.squeeze(0).numpy(),
+                lr_np.squeeze(0).numpy(), # Assumes batch size of 1
+                hr_np.squeeze(0).numpy(), # Assumes batch size of 1
                 model_args
             )
 
@@ -232,41 +232,6 @@ def train_fold_agsr(
     return val_preds
 
 
-def compute_metrics(
-        model: torch.nn.Module,
-        dataset: BrainDataset,
-        args: AGSRArgs
-    ) -> dict[str, float]:
-    """
-    Compute evaluation metrics for a dataset using the generator model
-
-    Params:
-        model: Trained AGSRNet generator
-        dataset: BrainDataset containing LR-HR pairs
-        args: AGSRArgs with padding, lr_dim, hr_dim
-    Returns:
-        dict[str, float]: Computed metrics (e.g., MSE, PSNR) for the dataset
-    """
-    loader = DataLoader(
-        dataset,
-        batch_size=1,
-        shuffle=False,
-        pin_memory=PIN_MEMORY
-    )
-    model.eval()
-    mats_arr = []
-    with torch.no_grad():
-        for lr_np, hr_np in loader:
-            lr_t, padded_hr = prepare_tensors(
-                lr_np.squeeze(0).numpy(),
-                hr_np.squeeze(0).numpy(),
-                args
-            )
-            preds, _, _, _ = model(lr_t)
-            mats_arr.append((preds.unsqueeze(0), padded_hr.unsqueeze(0)))
-    return get_metrics(mats_arr, final_metrics=False)
-
-
 def predict_from_arrays(
     model: torch.nn.Module,
     lr_arrays: np.ndarray,
@@ -296,7 +261,11 @@ def predict_from_arrays(
     with torch.no_grad():
         for i, lr_np in enumerate(lr_arrays):
             lr_t = torch.tensor(lr_np, dtype=torch.float32, device=DEVICE)
-            preds, _, _, _ = model(lr_t)
+            raw_output = model(lr_t) # Assume prediction is first returned item
+            preds = (
+                raw_output[0]
+                if isinstance(raw_output, (tuple, list)) else raw_output
+            )
             pred_np = preds.detach().cpu().numpy()
             hr_predictions[i] = pred_np[
                 padding:padding + center_dim,
@@ -310,7 +279,9 @@ def train_full_and_predict(
     lr_train: np.ndarray,
     hr_train: np.ndarray,
     lr_test: np.ndarray,
-    model_args: AGSRArgs
+    model_cls: Type[torch.nn.Module],
+    model_args: AGSRArgs,
+    trainer_fn # Single fold function, not one with fold in name!!
 ) -> np.ndarray:
     """
     Train AGSR-Net on full training data, then predict HR for test LR arrays
@@ -322,6 +293,7 @@ def train_full_and_predict(
             shape (N_train, center_dim, center_dim)
         lr_test: NumPy array of LR test samples,
             shape (N_test, LR_dim, LR_dim)
+        model_cls: The type of model to train
         model_args: AGSRArgs instance with training hyperparameters
     Returns:
         np.ndarray: Predicted HR arrays, shape (N_test, center_dim, center_dim)
@@ -331,10 +303,11 @@ def train_full_and_predict(
         torch.tensor(hr_train, dtype=torch.float32)
     )
 
-    model = AGSRNet(model_args)
+    model = model_cls(model_args) if model_args is not None else model_cls()
+    model = model.to(DEVICE)
 
     # Train model on full dataset (no validation, no fold_id)
-    model = train_agsr(
+    model = trainer_fn(
         model,
         full_train_dataset,
         model_args,
